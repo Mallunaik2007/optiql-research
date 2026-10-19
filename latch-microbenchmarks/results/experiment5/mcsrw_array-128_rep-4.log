@@ -1,0 +1,36 @@
+round=4
+position=3
+lock=mcsrw
+command=latch-microbenchmarks/build/benchmarks/mcsrw_offset_bench --threads=12 --seconds=5 --array_size=128 --ver_read_pct=80 --acq_rel_pct=20 --dist=uniform --cs_cycles=50 --ps_cycles=0
+Allocated 1024 queue nodes over 64 pages across 1 sockets
+Setup: 
+  threads: 12
+  duration (s): 5s
+  number of latches: 128
+Operation mix (%): 
+  version-read :   80
+  acquire-release: 20
+Index distribution: 
+  distribution:   uniform
+Critical section:   50 cycles
+Parallel section:   0 cycles
+Initiating 128 latches...Done
+Benchmarking...Done
+=====================
+Thread,Operations/s,Successes/s: 
+0,4946945.600,4946945.600,3957124.800,3957124.800
+1,4992701.800,4992701.800,3994181.000,3994181.000
+2,5190826.200,5190826.200,4152466.000,4152466.000
+3,5150795.600,5150795.600,4121113.200,4121113.200
+4,4950908.000,4950908.000,3960652.800,3960652.800
+5,4955871.600,4955871.600,3964967.400,3964967.400
+6,5202592.800,5202592.800,4162195.200,4162195.200
+7,4970656.400,4970656.400,3976696.400,3976696.400
+8,4996530.600,4996530.600,3996838.400,3996838.400
+9,5243221.200,5243221.200,4194371.800,4194371.800
+10,4997172.200,4997172.200,3997990.800,3997990.800
+11,4966089.800,4966089.800,3972831.600,3972831.600
+---------------------
+All,60564311.800,60564311.800,48451429.400,48451429.400
+
+exit_status=0

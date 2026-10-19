@@ -1,0 +1,35 @@
+round=1
+position=5
+lock=stdrw
+command=latch-microbenchmarks/build/benchmarks/stdrw_bench --threads=12 --seconds=5 --array_size=1024 --ver_read_pct=80 --acq_rel_pct=20 --dist=uniform --cs_cycles=50 --ps_cycles=0
+Setup: 
+  threads: 12
+  duration (s): 5s
+  number of latches: 1024
+Operation mix (%): 
+  version-read :   80
+  acquire-release: 20
+Index distribution: 
+  distribution:   uniform
+Critical section:   50 cycles
+Parallel section:   0 cycles
+Initiating 1024 latches...Done
+Benchmarking...Done
+=====================
+Thread,Operations/s,Successes/s: 
+0,8343270.400,8343270.400,6674569.200,6674569.200
+1,8363339.000,8363339.000,6691012.000,6691012.000
+2,8319277.200,8319277.200,6655411.400,6655411.400
+3,8265177.600,8265177.600,6612931.000,6612931.000
+4,8346780.200,8346780.200,6677086.000,6677086.000
+5,8399021.000,8399021.000,6719536.200,6719536.200
+6,8336586.200,8336586.200,6669420.800,6669420.800
+7,8379030.800,8379030.800,6703891.400,6703891.400
+8,8264484.400,8264484.400,6611682.400,6611682.400
+9,8376595.600,8376595.600,6701154.400,6701154.400
+10,8358583.000,8358583.000,6687501.000,6687501.000
+11,8406408.200,8406408.200,6724478.000,6724478.000
+---------------------
+All,100158553.600,100158553.600,80128673.800,80128673.800
+
+exit_status=0
