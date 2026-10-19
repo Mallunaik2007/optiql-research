@@ -1,0 +1,26 @@
+Setup: 
+  threads: 8
+  duration (s): 5s
+  number of latches: 1
+Operation mix (%): 
+  version-read :   80
+  acquire-release: 20
+Index distribution: 
+  distribution:   uniform
+Critical section:   50 cycles
+Parallel section:   0 cycles
+Initiating 1 latches...Done
+Benchmarking...Done
+=====================
+Thread,Operations/s,Successes/s: 
+0,221582.600,221582.600,177283.600,177283.600
+1,234225.800,234225.800,187405.200,187405.200
+2,222567.200,222567.200,177998.000,177998.000
+3,229730.000,229730.000,183738.800,183738.800
+4,246133.200,246133.200,197036.800,197036.800
+5,242165.200,242165.200,193776.000,193776.000
+6,521812.800,521812.800,417409.600,417409.600
+7,574379.600,574379.600,459440.600,459440.600
+---------------------
+All,2492596.400,2492596.400,1994088.600,1994088.600
+exit_status=0
