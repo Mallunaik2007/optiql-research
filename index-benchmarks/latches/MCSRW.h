@@ -37,7 +37,14 @@ class MCSRWLock;
 
 enum class MCSRWRequestorClass : uint64_t { READING, WRITING };
 enum class MCSRWSuccessorClass : uint32_t { NONE, READER, WRITER };
+struct AdaptiveSpinState {
+    uint32_t threshold = 64;
+};
 
+inline AdaptiveSpinState& get_adaptive_spin_state() {
+    thread_local AdaptiveSpinState state;
+    return state;
+}
 struct alignas(CACHELINE_SIZE * 2) MCSRWQNode {
  public:
   alignas(CACHELINE_SIZE) std::atomic<MCSRWQNode *> next_;
@@ -286,14 +293,26 @@ class MCSRWLock {
       pred->set_next(qnode);
     }
 
+    auto& spin_state = get_adaptive_spin_state();
     uint32_t spin_count = 0;
 
     while (qnode->get_blocked() == kBlocked) {
-        if (spin_count >= MCSRW_SPIN_THRESHOLD) {
+        if (spin_count >= spin_state.threshold) {
             _mm_pause();
-        } else {
+        }
+
+        // Saturate the counter to prevent overflow.
+        if (spin_count < 256) {
             ++spin_count;
         }
+    }
+
+    if (spin_count < 32) {
+        spin_state.threshold = 256;
+    } else if (spin_count < 256) {
+        spin_state.threshold = 64;
+    } else {
+        spin_state.threshold = 0;
     }
   }
 
@@ -347,15 +366,26 @@ class MCSRWLock {
               MCSRWQNode::make_state(kBlocked, MCSRWSuccessorClass::NONE),
               MCSRWQNode::make_state(kBlocked, MCSRWSuccessorClass::READER))) {
         pred->set_next(qnode);
-        uint32_t spin_count = 0;
+      auto& spin_state = get_adaptive_spin_state();
+      uint32_t spin_count = 0;
 
-        while (qnode->get_blocked() == kBlocked) {
-            if (spin_count >= MCSRW_SPIN_THRESHOLD) {
-                _mm_pause();
-            } else {
-                ++spin_count;
-            }
-        }
+      while (qnode->get_blocked() == kBlocked) {
+          if (spin_count >= spin_state.threshold) {
+              _mm_pause();
+          }
+
+          if (spin_count < 256) {
+              ++spin_count;
+          }
+      }
+
+      if (spin_count < 32) {
+          spin_state.threshold = 256;
+      } else if (spin_count < 256) {
+          spin_state.threshold = 64;
+      } else {
+          spin_state.threshold = 0;
+      }
       } else {
         reader_count_.fetch_add(1);
         pred->set_next(qnode);
