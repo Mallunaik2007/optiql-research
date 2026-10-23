@@ -283,6 +283,7 @@ class MCSRWLock {
     }
 
     while (qnode->get_blocked() == kBlocked) {
+     _mm_pause();
     }
   }
 
@@ -337,6 +338,7 @@ class MCSRWLock {
               MCSRWQNode::make_state(kBlocked, MCSRWSuccessorClass::READER))) {
         pred->set_next(qnode);
         while (qnode->get_blocked() == kBlocked) {
+          _mm_pause();
         }
       } else {
         reader_count_.fetch_add(1);
