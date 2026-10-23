@@ -282,8 +282,14 @@ class MCSRWLock {
       pred->set_next(qnode);
     }
 
+    uint32_t spin_count = 0;
+
     while (qnode->get_blocked() == kBlocked) {
-     _mm_pause();
+        if (spin_count >= 64) {
+            _mm_pause();
+        } else {
+            ++spin_count;
+        }
     }
   }
 
@@ -337,8 +343,14 @@ class MCSRWLock {
               MCSRWQNode::make_state(kBlocked, MCSRWSuccessorClass::NONE),
               MCSRWQNode::make_state(kBlocked, MCSRWSuccessorClass::READER))) {
         pred->set_next(qnode);
+        uint32_t spin_count = 0;
+
         while (qnode->get_blocked() == kBlocked) {
-          _mm_pause();
+            if (spin_count >= 64) {
+                _mm_pause();
+            } else {
+                ++spin_count;
+            }
         }
       } else {
         reader_count_.fetch_add(1);
