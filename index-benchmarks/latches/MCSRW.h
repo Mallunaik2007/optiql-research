@@ -7,6 +7,10 @@
 #include <atomic>
 #include <cassert>
 
+#ifndef MCSRW_SPIN_THRESHOLD
+#define MCSRW_SPIN_THRESHOLD 64
+#endif
+
 namespace mcsrw {
 
 // Implementation follows https://www.cs.rochester.edu/research/synchronization/pseudocode/rw.html
@@ -285,7 +289,7 @@ class MCSRWLock {
     uint32_t spin_count = 0;
 
     while (qnode->get_blocked() == kBlocked) {
-        if (spin_count >= 64) {
+        if (spin_count >= MCSRW_SPIN_THRESHOLD) {
             _mm_pause();
         } else {
             ++spin_count;
@@ -346,7 +350,7 @@ class MCSRWLock {
         uint32_t spin_count = 0;
 
         while (qnode->get_blocked() == kBlocked) {
-            if (spin_count >= 64) {
+            if (spin_count >= MCSRW_SPIN_THRESHOLD) {
                 _mm_pause();
             } else {
                 ++spin_count;
