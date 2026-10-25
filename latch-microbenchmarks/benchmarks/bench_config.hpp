@@ -14,6 +14,21 @@ DECLARE_uint64(ps_cycles);
 
 template<class Latch>
 struct Bench : public PerformanceTest {
+#ifdef MCSRW_EWMA_INSTRUMENT
+  struct EWMACounters {
+    uint64_t threshold_0 = 0;
+    uint64_t threshold_64 = 0;
+    uint64_t threshold_256 = 0;
+    uint64_t writer_updates = 0;
+    uint64_t reader_updates = 0;
+    uint64_t wait_0_31 = 0;
+    uint64_t wait_32_63 = 0;
+    uint64_t wait_64_127 = 0;
+    uint64_t wait_128_256 = 0;
+  };
+
+  std::vector<EWMACounters> ewma_results;
+#endif
   // Benchmark worker function
   void WorkerRun(uint32_t node_id, uint32_t thread_id);
 

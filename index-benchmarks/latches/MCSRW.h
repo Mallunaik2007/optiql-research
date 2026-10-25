@@ -40,8 +40,33 @@ enum class MCSRWSuccessorClass : uint32_t { NONE, READER, WRITER };
 struct AdaptiveSpinState {
     uint32_t threshold = 64;
     uint32_t smoothed_wait = 64;
-};
 
+#ifdef MCSRW_EWMA_INSTRUMENT
+    uint64_t threshold_0_count = 0;
+    uint64_t threshold_64_count = 0;
+    uint64_t threshold_256_count = 0;
+
+    uint64_t writer_updates = 0;
+    uint64_t reader_updates = 0;
+    uint64_t wait_0_31 = 0;
+    uint64_t wait_32_63 = 0;
+    uint64_t wait_64_127 = 0;
+    uint64_t wait_128_256 = 0;
+#endif
+};
+#ifdef MCSRW_EWMA_INSTRUMENT
+inline void record_spin_wait(AdaptiveSpinState& state, uint32_t spin_count) {
+    if (spin_count < 32) {
+        ++state.wait_0_31;
+    } else if (spin_count < 64) {
+        ++state.wait_32_63;
+    } else if (spin_count < 128) {
+        ++state.wait_64_127;
+    } else {
+        ++state.wait_128_256;
+    }
+}
+#endif
 inline AdaptiveSpinState& get_adaptive_spin_state() {
     thread_local AdaptiveSpinState state;
     return state;
@@ -307,7 +332,9 @@ class MCSRWLock {
             ++spin_count;
         }
     }
-
+    #ifdef MCSRW_EWMA_INSTRUMENT
+      record_spin_wait(spin_state, spin_count);
+    #endif
     // Update the exponentially weighted moving average.
     spin_state.smoothed_wait =(3 * spin_state.smoothed_wait + spin_count) / 4;
     // Select the next spinning threshold using smoothed history.
@@ -318,6 +345,17 @@ class MCSRWLock {
     } else {
         spin_state.threshold = 0;
     }
+    #ifdef MCSRW_EWMA_INSTRUMENT
+        ++spin_state.writer_updates;
+
+        if (spin_state.threshold == 0) {
+            ++spin_state.threshold_0_count;
+        } else if (spin_state.threshold == 64) {
+            ++spin_state.threshold_64_count;
+        } else if (spin_state.threshold == 256) {
+            ++spin_state.threshold_256_count;
+        }
+    #endif
   }
 
   inline void unlock(MCSRWQNode *qnode) {
@@ -382,7 +420,9 @@ class MCSRWLock {
               ++spin_count;
           }
       }
-
+      #ifdef MCSRW_EWMA_INSTRUMENT
+        record_spin_wait(spin_state, spin_count);
+      #endif
       // Update the exponentially weighted moving average.
       spin_state.smoothed_wait =(3 * spin_state.smoothed_wait + spin_count) / 4;
 
@@ -394,11 +434,23 @@ class MCSRWLock {
       } else {
           spin_state.threshold = 0;
       }
+      #ifdef MCSRW_EWMA_INSTRUMENT
+        ++spin_state.reader_updates;
+
+        if (spin_state.threshold == 0) {
+            ++spin_state.threshold_0_count;
+        } else if (spin_state.threshold == 64) {
+            ++spin_state.threshold_64_count;
+        } else if (spin_state.threshold == 256) {
+            ++spin_state.threshold_256_count;
+        }
+      #endif
       } else {
         reader_count_.fetch_add(1);
         pred->set_next(qnode);
         qnode->set_blocked(kUnblocked);
       }
+
     }
 
     if (qnode->get_successor_class() == MCSRWSuccessorClass::READER) {

@@ -122,6 +122,62 @@ int main(int argc, char **argv) {
   MCSRWBench test;
   test.Run();
 
+#ifdef MCSRW_EWMA_INSTRUMENT
+  uint64_t threshold_0 = 0;
+  uint64_t threshold_64 = 0;
+  uint64_t threshold_256 = 0;
+  uint64_t writer_updates = 0;
+  uint64_t reader_updates = 0;
+  uint64_t wait_0_31 = 0;
+  uint64_t wait_32_63 = 0;
+  uint64_t wait_64_127 = 0;
+  uint64_t wait_128_256 = 0;
+
+  for (const auto& counters : test.ewma_results) {
+    threshold_0 += counters.threshold_0;
+    threshold_64 += counters.threshold_64;
+    threshold_256 += counters.threshold_256;
+    writer_updates += counters.writer_updates;
+    reader_updates += counters.reader_updates;
+    wait_0_31 += counters.wait_0_31;
+    wait_32_63 += counters.wait_32_63;
+    wait_64_127 += counters.wait_64_127;
+    wait_128_256 += counters.wait_128_256;
+  }
+
+  const uint64_t total_selections =
+      threshold_0 + threshold_64 + threshold_256;
+
+  const uint64_t total_updates =
+      writer_updates + reader_updates;
+
+  std::cout << "\n=== EWMA Instrumentation Summary ===\n";
+  std::cout << "Threshold 0 selections:   " << threshold_0 << '\n';
+  std::cout << "Threshold 64 selections:  " << threshold_64 << '\n';
+  std::cout << "Threshold 256 selections: " << threshold_256 << '\n';
+  std::cout << "Reader updates:           " << reader_updates << '\n';
+  std::cout << "Writer updates:           " << writer_updates << '\n';
+  std::cout << "Total selections:         " << total_selections << '\n';
+  std::cout << "Total updates:            " << total_updates << '\n';
+
+  std::cout << "Counter consistency:      "
+            << (total_selections == total_updates ? "PASS" : "FAIL")
+            << '\n';
+  const uint64_t total_waits =
+      wait_0_31 + wait_32_63 + wait_64_127 + wait_128_256;
+
+  std::cout << "\n=== Spin Wait Distribution ===\n";
+  std::cout << "Wait 0-31:      " << wait_0_31 << '\n';
+  std::cout << "Wait 32-63:     " << wait_32_63 << '\n';
+  std::cout << "Wait 64-127:    " << wait_64_127 << '\n';
+  std::cout << "Wait 128-256:   " << wait_128_256 << '\n';
+  std::cout << "Total waits:    " << total_waits << '\n';
+
+  std::cout << "Wait consistency: "
+            << (total_waits == total_updates ? "PASS" : "FAIL")
+            << '\n';          
+#endif
+
   return 0;
 }
 

@@ -1,7 +1,7 @@
 #include <glog/logging.h>
 #include <gtest/gtest.h>
 #include <numa.h>
-
+#include <type_traits>
 #include "latches/MCS.h"
 #include "latches/TATAS.h"
 #include "latches/OMCSImpl.h"
@@ -177,10 +177,30 @@ void Bench<Latch>::WorkerRun(uint32_t node_id, uint32_t thread_id) {
   nsuccesses[thread_id] = my_nsuccesses;
   reads[thread_id] = my_reads;
   read_successes[thread_id] = my_read_successes;
+  #if defined(MCSRW_EWMA_INSTRUMENT) && defined(MCSRW_LOCK_ONLY)
+      if constexpr (std::is_same_v<Latch, mcsrw::MCSRWLock>) {
+        const auto& state = mcsrw::get_adaptive_spin_state();
+
+        ewma_results[thread_id].threshold_0 = state.threshold_0_count;
+        ewma_results[thread_id].threshold_64 = state.threshold_64_count;
+        ewma_results[thread_id].threshold_256 = state.threshold_256_count;
+        ewma_results[thread_id].writer_updates = state.writer_updates;
+        ewma_results[thread_id].reader_updates = state.reader_updates;
+        ewma_results[thread_id].wait_0_31 = state.wait_0_31;
+        ewma_results[thread_id].wait_32_63 = state.wait_32_63;
+        ewma_results[thread_id].wait_64_127 = state.wait_64_127;
+        ewma_results[thread_id].wait_128_256 = state.wait_128_256;
+      }
+  #endif
 }
 
 template <class Latch>
 Bench<Latch>::Bench() : PerformanceTest(FLAGS_threads, FLAGS_seconds) {
+#if defined(MCSRW_EWMA_INSTRUMENT) && defined(MCSRW_LOCK_ONLY)
+  if constexpr (std::is_same_v<Latch, mcsrw::MCSRWLock>) {
+    ewma_results.resize(nthreads);
+  }
+#endif  
   {
     std::string dist(FLAGS_dist);
     std::transform(dist.begin(), dist.end(), dist.begin(), ::tolower);
