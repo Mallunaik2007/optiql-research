@@ -190,6 +190,11 @@ void Bench<Latch>::WorkerRun(uint32_t node_id, uint32_t thread_id) {
         ewma_results[thread_id].wait_32_63 = state.wait_32_63;
         ewma_results[thread_id].wait_64_127 = state.wait_64_127;
         ewma_results[thread_id].wait_128_256 = state.wait_128_256;
+        // Copy TSC waiting-time statistics
+        ewma_results[thread_id].tsc_wait_samples = state.tsc_wait_samples;
+        ewma_results[thread_id].tsc_wait_total = state.tsc_wait_total;
+        ewma_results[thread_id].tsc_wait_min = state.tsc_wait_min;
+        ewma_results[thread_id].tsc_wait_max = state.tsc_wait_max;
       }
   #endif
 }

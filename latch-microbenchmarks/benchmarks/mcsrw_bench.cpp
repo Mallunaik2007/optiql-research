@@ -132,6 +132,11 @@ int main(int argc, char **argv) {
   uint64_t wait_32_63 = 0;
   uint64_t wait_64_127 = 0;
   uint64_t wait_128_256 = 0;
+  // Aggregated TSC waiting-time statistics
+  uint64_t tsc_wait_samples = 0;
+  uint64_t tsc_wait_total = 0;
+  uint64_t tsc_wait_min = UINT64_MAX;
+  uint64_t tsc_wait_max = 0;
 
   for (const auto& counters : test.ewma_results) {
     threshold_0 += counters.threshold_0;
@@ -143,6 +148,19 @@ int main(int argc, char **argv) {
     wait_32_63 += counters.wait_32_63;
     wait_64_127 += counters.wait_64_127;
     wait_128_256 += counters.wait_128_256;
+    // Aggregate TSC waiting-time statistics
+    tsc_wait_samples += counters.tsc_wait_samples;
+    tsc_wait_total += counters.tsc_wait_total;
+
+    if (counters.tsc_wait_samples > 0) {
+        if (counters.tsc_wait_min < tsc_wait_min) {
+            tsc_wait_min = counters.tsc_wait_min;
+        }
+
+        if (counters.tsc_wait_max > tsc_wait_max) {
+            tsc_wait_max = counters.tsc_wait_max;
+        }
+    }
   }
 
   const uint64_t total_selections =
@@ -176,6 +194,27 @@ int main(int argc, char **argv) {
   std::cout << "Wait consistency: "
             << (total_waits == total_updates ? "PASS" : "FAIL")
             << '\n';          
+  std::cout << "\n=== TSC Waiting-Time Statistics ===\n";
+std::cout << "Valid TSC samples:   " << tsc_wait_samples << '\n';
+std::cout << "Total waiting ticks: " << tsc_wait_total << '\n';
+
+if (tsc_wait_samples > 0) {
+    double average_ticks =
+        static_cast<double>(tsc_wait_total) / tsc_wait_samples;
+
+    std::cout << "Average wait (ticks): " << average_ticks << '\n';
+    std::cout << "Minimum wait (ticks): " << tsc_wait_min << '\n';
+    std::cout << "Maximum wait (ticks): " << tsc_wait_max << '\n';
+} else {
+    std::cout << "No valid TSC waiting-time samples.\n";
+}
+
+std::cout << "Rejected TSC samples: "
+          << (total_waits - tsc_wait_samples) << '\n';
+
+std::cout << "TSC sample consistency: "
+          << (tsc_wait_samples <= total_waits ? "PASS" : "FAIL")
+          << '\n';          
 #endif
 
   return 0;

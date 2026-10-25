@@ -52,9 +52,16 @@ struct AdaptiveSpinState {
     uint64_t wait_32_63 = 0;
     uint64_t wait_64_127 = 0;
     uint64_t wait_128_256 = 0;
+
+    // TSC waiting-time measurements
+    uint64_t tsc_wait_samples = 0;
+    uint64_t tsc_wait_total = 0;
+    uint64_t tsc_wait_min = UINT64_MAX;
+    uint64_t tsc_wait_max = 0;
 #endif
 };
 #ifdef MCSRW_EWMA_INSTRUMENT
+
 inline void record_spin_wait(AdaptiveSpinState& state, uint32_t spin_count) {
     if (spin_count < 32) {
         ++state.wait_0_31;
@@ -66,6 +73,20 @@ inline void record_spin_wait(AdaptiveSpinState& state, uint32_t spin_count) {
         ++state.wait_128_256;
     }
 }
+
+inline void record_tsc_wait(AdaptiveSpinState& state, uint64_t ticks) {
+    ++state.tsc_wait_samples;
+    state.tsc_wait_total += ticks;
+
+    if (ticks < state.tsc_wait_min) {
+        state.tsc_wait_min = ticks;
+    }
+
+    if (ticks > state.tsc_wait_max) {
+        state.tsc_wait_max = ticks;
+    }
+}
+
 #endif
 inline AdaptiveSpinState& get_adaptive_spin_state() {
     thread_local AdaptiveSpinState state;
@@ -322,18 +343,34 @@ class MCSRWLock {
     auto& spin_state = get_adaptive_spin_state();
     uint32_t spin_count = 0;
 
+    #ifdef MCSRW_EWMA_INSTRUMENT
+        unsigned int tsc_aux_start = 0;
+        unsigned int tsc_aux_end = 0;
+
+        _mm_lfence();
+        uint64_t tsc_start = __rdtscp(&tsc_aux_start);
+        _mm_lfence();
+    #endif
+
     while (qnode->get_blocked() == kBlocked) {
         if (spin_count >= spin_state.threshold) {
             _mm_pause();
         }
 
-        // Saturate the counter to prevent overflow.
         if (spin_count < 256) {
             ++spin_count;
         }
     }
+
     #ifdef MCSRW_EWMA_INSTRUMENT
-      record_spin_wait(spin_state, spin_count);
+        uint64_t tsc_end = __rdtscp(&tsc_aux_end);
+        _mm_lfence();
+
+        record_spin_wait(spin_state, spin_count);
+
+        if (tsc_aux_start == tsc_aux_end && tsc_end >= tsc_start) {
+            record_tsc_wait(spin_state, tsc_end - tsc_start);
+        }
     #endif
     // Update the exponentially weighted moving average.
     spin_state.smoothed_wait =(3 * spin_state.smoothed_wait + spin_count) / 4;
@@ -411,6 +448,15 @@ class MCSRWLock {
       auto& spin_state = get_adaptive_spin_state();
       uint32_t spin_count = 0;
 
+      #ifdef MCSRW_EWMA_INSTRUMENT
+          unsigned int tsc_aux_start = 0;
+          unsigned int tsc_aux_end = 0;
+
+          _mm_lfence();
+          uint64_t tsc_start = __rdtscp(&tsc_aux_start);
+          _mm_lfence();
+      #endif
+
       while (qnode->get_blocked() == kBlocked) {
           if (spin_count >= spin_state.threshold) {
               _mm_pause();
@@ -420,8 +466,16 @@ class MCSRWLock {
               ++spin_count;
           }
       }
+
       #ifdef MCSRW_EWMA_INSTRUMENT
-        record_spin_wait(spin_state, spin_count);
+          uint64_t tsc_end = __rdtscp(&tsc_aux_end);
+          _mm_lfence();
+
+          record_spin_wait(spin_state, spin_count);
+
+          if (tsc_aux_start == tsc_aux_end && tsc_end >= tsc_start) {
+              record_tsc_wait(spin_state, tsc_end - tsc_start);
+          }
       #endif
       // Update the exponentially weighted moving average.
       spin_state.smoothed_wait =(3 * spin_state.smoothed_wait + spin_count) / 4;
