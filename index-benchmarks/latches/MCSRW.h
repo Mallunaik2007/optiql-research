@@ -39,6 +39,7 @@ enum class MCSRWRequestorClass : uint64_t { READING, WRITING };
 enum class MCSRWSuccessorClass : uint32_t { NONE, READER, WRITER };
 struct AdaptiveSpinState {
     uint32_t threshold = 64;
+    uint32_t smoothed_wait = 64;
 };
 
 inline AdaptiveSpinState& get_adaptive_spin_state() {
@@ -307,9 +308,12 @@ class MCSRWLock {
         }
     }
 
-    if (spin_count < 32) {
+    // Update the exponentially weighted moving average.
+    spin_state.smoothed_wait =(3 * spin_state.smoothed_wait + spin_count) / 4;
+    // Select the next spinning threshold using smoothed history.
+    if (spin_state.smoothed_wait < 32) {
         spin_state.threshold = 256;
-    } else if (spin_count < 256) {
+    } else if (spin_state.smoothed_wait < 128) {
         spin_state.threshold = 64;
     } else {
         spin_state.threshold = 0;
@@ -379,9 +383,13 @@ class MCSRWLock {
           }
       }
 
-      if (spin_count < 32) {
+      // Update the exponentially weighted moving average.
+      spin_state.smoothed_wait =(3 * spin_state.smoothed_wait + spin_count) / 4;
+
+      // Select the next spinning threshold using smoothed history.
+      if (spin_state.smoothed_wait < 32) {
           spin_state.threshold = 256;
-      } else if (spin_count < 256) {
+      } else if (spin_state.smoothed_wait < 128) {
           spin_state.threshold = 64;
       } else {
           spin_state.threshold = 0;
