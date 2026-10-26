@@ -106,3 +106,26 @@ The first numeric field following `All,` represents aggregate
 throughput in operations per second.
 
 Results may vary depending on hardware, scheduling, and contention.
+
+## Statistical Analysis
+
+Five paired Fixed-64 and Adaptive EWMA runs were analyzed.
+
+- Fixed-64 mean: 17.4125 Mops/s
+- Fixed-64 sample standard deviation: 0.9476 Mops/s
+- Adaptive EWMA mean: 17.7812 Mops/s
+- Adaptive EWMA sample standard deviation: 0.7836 Mops/s
+- Mean paired difference (EWMA minus Fixed-64): +0.3687 Mops/s
+- Approximate 95% paired t confidence interval:
+  [-1.2764, +2.0139] Mops/s
+
+The confidence interval includes zero. Therefore, this experiment
+does not provide sufficient evidence of a consistent throughput
+advantage for Adaptive EWMA over Fixed-64.
+
+The analysis assumes independent, approximately normally
+distributed paired differences. WSL scheduling variation and
+the small sample size limit the strength of this conclusion.
+
+The observed 2.12% mean improvement is descriptive, not
+a statistically established performance gain.
