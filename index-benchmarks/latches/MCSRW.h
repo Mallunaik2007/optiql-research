@@ -353,7 +353,11 @@ class MCSRWLock {
     #endif
 
     while (qnode->get_blocked() == kBlocked) {
+        #ifdef MCSRW_FIXED_MODE
+        if (spin_count >= MCSRW_SPIN_THRESHOLD) {
+#else
         if (spin_count >= spin_state.threshold) {
+#endif
             _mm_pause();
         }
 
@@ -373,6 +377,7 @@ class MCSRWLock {
         }
     #endif
     // Update the exponentially weighted moving average.
+#ifndef MCSRW_FIXED_MODE
     spin_state.smoothed_wait =(3 * spin_state.smoothed_wait + spin_count) / 4;
     // Select the next spinning threshold using smoothed history.
     if (spin_state.smoothed_wait < 32) {
@@ -382,6 +387,7 @@ class MCSRWLock {
     } else {
         spin_state.threshold = 0;
     }
+    #endif // MCSRW_FIXED_MODE
     #ifdef MCSRW_EWMA_INSTRUMENT
         ++spin_state.writer_updates;
 
@@ -458,7 +464,11 @@ class MCSRWLock {
       #endif
 
       while (qnode->get_blocked() == kBlocked) {
-          if (spin_count >= spin_state.threshold) {
+          #ifdef MCSRW_FIXED_MODE
+        if (spin_count >= MCSRW_SPIN_THRESHOLD) {
+#else
+        if (spin_count >= spin_state.threshold) {
+#endif
               _mm_pause();
           }
 
@@ -478,7 +488,8 @@ class MCSRWLock {
           }
       #endif
       // Update the exponentially weighted moving average.
-      spin_state.smoothed_wait =(3 * spin_state.smoothed_wait + spin_count) / 4;
+  #ifndef MCSRW_FIXED_MODE
+    spin_state.smoothed_wait =(3 * spin_state.smoothed_wait + spin_count) / 4;
 
       // Select the next spinning threshold using smoothed history.
       if (spin_state.smoothed_wait < 32) {
@@ -488,6 +499,7 @@ class MCSRWLock {
       } else {
           spin_state.threshold = 0;
       }
+      #endif // MCSRW_FIXED_MODE
       #ifdef MCSRW_EWMA_INSTRUMENT
         ++spin_state.reader_updates;
 
