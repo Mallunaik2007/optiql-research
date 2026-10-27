@@ -25,6 +25,7 @@ struct Bench : public PerformanceTest {
     uint64_t wait_32_63 = 0;
     uint64_t wait_64_127 = 0;
     uint64_t wait_128_256 = 0;
+    uint64_t wait_at_cap = 0;
     // TSC waiting-time statistics
     uint64_t tsc_wait_samples = 0;
     uint64_t tsc_wait_total = 0;

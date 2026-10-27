@@ -52,6 +52,7 @@ struct AdaptiveSpinState {
     uint64_t wait_32_63 = 0;
     uint64_t wait_64_127 = 0;
     uint64_t wait_128_256 = 0;
+    uint64_t wait_at_cap = 0;
 
     // TSC waiting-time measurements
     uint64_t tsc_wait_samples = 0;
@@ -71,6 +72,9 @@ inline void record_spin_wait(AdaptiveSpinState& state, uint32_t spin_count) {
         ++state.wait_64_127;
     } else {
         ++state.wait_128_256;
+        if (spin_count == 256) {
+            ++state.wait_at_cap;
+        }
     }
 }
 

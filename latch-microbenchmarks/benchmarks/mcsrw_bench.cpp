@@ -132,6 +132,7 @@ int main(int argc, char **argv) {
   uint64_t wait_32_63 = 0;
   uint64_t wait_64_127 = 0;
   uint64_t wait_128_256 = 0;
+  uint64_t wait_at_cap = 0;
   // Aggregated TSC waiting-time statistics
   uint64_t tsc_wait_samples = 0;
   uint64_t tsc_wait_total = 0;
@@ -148,6 +149,7 @@ int main(int argc, char **argv) {
     wait_32_63 += counters.wait_32_63;
     wait_64_127 += counters.wait_64_127;
     wait_128_256 += counters.wait_128_256;
+    wait_at_cap += counters.wait_at_cap;
     // Aggregate TSC waiting-time statistics
     tsc_wait_samples += counters.tsc_wait_samples;
     tsc_wait_total += counters.tsc_wait_total;
@@ -190,6 +192,7 @@ int main(int argc, char **argv) {
   std::cout << "Wait 64-127:    " << wait_64_127 << '\n';
   std::cout << "Wait 128-256:   " << wait_128_256 << '\n';
   std::cout << "Total waits:    " << total_waits << '\n';
+  std::cout << "Waits at cap (256): " << wait_at_cap << '\n';
 
   std::cout << "Wait consistency: "
             << (total_waits == total_updates ? "PASS" : "FAIL")
